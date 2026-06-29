@@ -886,6 +886,14 @@ setInterval(checkPriceAlerts, THIRTY_MINUTES);
 // Jalankan sekali semasa server mula (untuk testing)
 setTimeout(checkPriceAlerts, 5000);
 
+// --- ENDPOINT MANUAL TRIGGER ---
+// Membolehkan admin trigger semakan harga pada bila-bila masa (tanpa restart server)
+app.get('/api/trigger-alerts', async (req, res) => {
+    // Kita jalankan di latar belakang supaya browser tidak 'hang' menunggu
+    checkPriceAlerts();
+    res.json({ status: 'Success', message: 'Semakan harga sedang dijalankan di latar belakang (background).' });
+});
+
 // --- ENDPOINT AI VISION ---
 app.post('/api/categorize-image', async (req, res) => {
     const { imageUrl, productName } = req.body;
