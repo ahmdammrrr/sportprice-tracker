@@ -28,7 +28,15 @@ const TELEGRAM_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 // Kita tak guna lagi TELEGRAM_CHAT_ID dari .env sebab kita nak ia dinamik
 
 // --- INISIALISASI FIREBASE ADMIN ---
-const serviceAccount = require('./serviceAccountKey.json');
+let serviceAccount;
+try {
+    serviceAccount = require('./serviceAccountKey.json');
+} catch (err) {
+    if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
+        throw new Error("Missing FIREBASE_SERVICE_ACCOUNT env var and serviceAccountKey.json");
+    }
+    serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+}
 
 // --- HACK PENYELARASAN MASA (System Time Hack) ---
 try {
