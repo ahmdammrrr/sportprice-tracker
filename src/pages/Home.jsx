@@ -294,6 +294,9 @@ const Home = ({ user }) => {
         addedAt: serverTimestamp()
       });
 
+      // Juga simpan ke trending untuk perkayakan kolam recommendation
+      saveToTrending(item);
+
       alert(`"${item.name}" successfully saved to Watchlist!`);
     } catch (error) {
       console.error("Error saving to watchlist:", error);

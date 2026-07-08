@@ -514,6 +514,23 @@ const ProductDetails = ({ user }) => {
       return;
     }
 
+    // Helper: simpan ke trending untuk perkayakan kolam recommendation
+    const saveToTrending = async () => {
+      try {
+        await addDoc(collection(db, "trending"), {
+          name: productName,
+          price: initialPrice,
+          image: initialImage,
+          link: initialLink || '',
+          source: initialSource,
+          category: "Footwear",
+          createdAt: serverTimestamp()
+        });
+      } catch (err) {
+        console.error("Error saving to trending:", err);
+      }
+    };
+
     try {
       await addDoc(collection(db, "watchlist"), {
         userId: user.uid,
@@ -525,6 +542,7 @@ const ProductDetails = ({ user }) => {
         addedAt: serverTimestamp()
       });
       setIsSaved(true);
+      saveToTrending(); // Juga simpan ke trending
       alert(`"${productName}" successfully saved to Watchlist!`);
     } catch (error) {
       console.error(error);
@@ -557,6 +575,21 @@ const ProductDetails = ({ user }) => {
       });
       alert(`Alert set! We will notify you if the price of ${productName} drops below RM${targetPrice}`);
       setTargetPrice('');
+
+      // Simpan ke trending juga apabila user set alert (signal kuat minat user)
+      try {
+        await addDoc(collection(db, "trending"), {
+          name: productName,
+          price: initialPrice,
+          image: initialImage,
+          link: initialLink || '',
+          source: initialSource,
+          category: "Footwear",
+          createdAt: serverTimestamp()
+        });
+      } catch (err) {
+        console.error("Error saving to trending from alert:", err);
+      }
     } catch (error) {
       console.error(error);
       alert("Failed to set price alert.");
