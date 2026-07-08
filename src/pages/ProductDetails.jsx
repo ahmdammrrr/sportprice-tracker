@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, ExternalLink, Bell, TrendingDown, TrendingUp, Clock, Loader2, Bookmark } from 'lucide-react';
+import { ChevronLeft, ExternalLink, Bell, TrendingDown, TrendingUp, Clock, Loader2, Bookmark, Sparkles } from 'lucide-react';
 import { db } from '../firebase';
-import { collection, addDoc, serverTimestamp, query, where, getDocs, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, where, getDocs, Timestamp, orderBy, limit } from 'firebase/firestore';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -58,6 +58,8 @@ const ProductDetails = ({ user }) => {
   const [historyData, setHistoryData] = useState([]);
   const [isFetchingHistory, setIsFetchingHistory] = useState(true);
   const [alertMethod, setAlertMethod] = useState('email'); // 'email' atau 'telegram'
+  const [originalSizes, setOriginalSizes] = useState([]);
+  const [similarProducts, setSimilarProducts] = useState([]);
 
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -72,6 +74,86 @@ const ProductDetails = ({ user }) => {
     };
     checkSaved();
   }, [user, productName]);
+
+  // CONTENT-BASED RECOMMENDATION: Fetch similar products from trending
+  useEffect(() => {
+    if (!productName) return;
+
+    const fetchSimilarProducts = async () => {
+      try {
+        const brands = ['nike', 'adidas', 'asics', 'puma', 'under armour', 'skechers', 'new balance', 'reebok', 'fila', 'mizuno'];
+        const nameLower = productName.toLowerCase();
+        const currentBrand = brands.find(b => nameLower.includes(b));
+
+        // Determine current product's category
+        const catKeywords = {
+          Footwear: /\b(shoe|shoes|boot|boots|sneaker|sneakers|cleat|cleats|sandal|slide|futsal)\b/,
+          Apparel: /\b(jersey|shirt|tee|t-shirt|short|shorts|pant|pants|tight|tights|sock|socks|jacket|hoodie)\b/,
+          Accessories: /\b(bag|backpack|cap|hat|ball|bottle|glove|racket|guard)\b/
+        };
+        let currentCategory = 'Others';
+        for (const [cat, regex] of Object.entries(catKeywords)) {
+          if (regex.test(nameLower)) { currentCategory = cat; break; }
+        }
+
+        const currentPrice = parseFloat((initialPrice || '').toString().replace(/[^\\d.]/g, ''));
+
+        // Fetch trending products
+        const q = query(collection(db, "trending"), orderBy("createdAt", "desc"), limit(30));
+        const snap = await getDocs(q);
+
+        const scored = [];
+        snap.forEach(doc => {
+          const data = doc.data();
+          const itemName = (data.name || '').toLowerCase();
+
+          // Skip if same product
+          if (itemName === nameLower) return;
+
+          let score = 0;
+          const reasons = [];
+
+          // Brand match
+          const itemBrand = brands.find(b => itemName.includes(b));
+          if (currentBrand && itemBrand === currentBrand) {
+            score += 4;
+            reasons.push(`Same brand`);
+          }
+
+          // Category match
+          let itemCat = 'Others';
+          for (const [cat, regex] of Object.entries(catKeywords)) {
+            if (regex.test(itemName)) { itemCat = cat; break; }
+          }
+          if (currentCategory !== 'Others' && itemCat === currentCategory) {
+            score += 3;
+            if (reasons.length === 0) reasons.push(`Similar ${itemCat.toLowerCase()}`);
+          }
+
+          // Price range match (within 50% of current price)
+          const itemPrice = parseFloat((data.price || '').toString().replace(/[^\\d.]/g, ''));
+          if (!isNaN(itemPrice) && !isNaN(currentPrice) && currentPrice > 0) {
+            if (itemPrice >= currentPrice * 0.5 && itemPrice <= currentPrice * 1.5) {
+              score += 1;
+            }
+          }
+
+          if (score > 0) {
+            scored.push({ ...data, score, reason: reasons[0] || 'Popular item' });
+          }
+        });
+
+        // Sort by score and take top 4
+        scored.sort((a, b) => b.score - a.score);
+        setSimilarProducts(scored.slice(0, 4));
+
+      } catch (error) {
+        console.error('Error fetching similar products:', error);
+      }
+    };
+
+    fetchSimilarProducts();
+  }, [productName, initialPrice]);
 
   useEffect(() => {
     const fetchComparison = async () => {
@@ -642,6 +724,39 @@ const ProductDetails = ({ user }) => {
           </div>
         </div>
       </div>
+
+      {/* YOU MIGHT ALSO LIKE - Content-Based Recommendation */}
+      {similarProducts.length > 0 && (
+        <div style={similarSection}>
+          <h2 style={similarTitle}>
+            <Sparkles size={20} style={{ color: '#f59e0b', verticalAlign: 'middle', marginRight: '8px' }} />
+            You Might Also Like
+          </h2>
+          <p style={similarSubtitle}>Similar products based on brand and category.</p>
+          <div style={similarGrid}>
+            {similarProducts.map((item, idx) => (
+              <div 
+                key={idx} 
+                style={similarCard}
+                className="hover-lift"
+                onClick={() => navigate(`/product-details?name=${encodeURIComponent(item.name)}&price=${encodeURIComponent(item.price)}&image=${encodeURIComponent(item.image)}&source=${encodeURIComponent(item.source)}&link=${encodeURIComponent(item.link)}`)}
+              >
+                {item.reason && <div style={similarReasonTag}>{item.reason}</div>}
+                <div style={similarImageWrapper}>
+                  <img src={item.image} alt={item.name} style={similarImage} />
+                </div>
+                <div style={similarContent}>
+                  <p style={similarItemName}>{item.name}</p>
+                  <div style={similarFooter}>
+                    <span style={similarPrice}>{formatPrice(item.price)}</span>
+                    <span style={similarSource}>{item.source}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -755,5 +870,111 @@ const setAlertBtn = {
   boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
 };
 const loaderWrapper = { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', padding: '40px 0', color: '#64748b' };
+
+// --- STYLES: You Might Also Like ---
+const similarSection = {
+  marginTop: '50px',
+  padding: '30px 0'
+};
+
+const similarTitle = {
+  fontSize: '1.5rem',
+  fontWeight: '800',
+  color: '#1e293b',
+  margin: '0 0 5px 0',
+  display: 'flex',
+  alignItems: 'center'
+};
+
+const similarSubtitle = {
+  color: '#64748b',
+  margin: '0 0 25px 0',
+  fontSize: '0.9rem'
+};
+
+const similarGrid = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+  gap: '20px'
+};
+
+const similarCard = {
+  backgroundColor: '#fff',
+  borderRadius: '16px',
+  padding: '16px',
+  cursor: 'pointer',
+  border: '1px solid #e2e8f0',
+  boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+  transition: 'all 0.25s ease',
+  position: 'relative'
+};
+
+const similarReasonTag = {
+  position: 'absolute',
+  top: '12px',
+  right: '12px',
+  background: 'linear-gradient(135deg, #fef3c7, #fde68a)',
+  color: '#92400e',
+  padding: '3px 10px',
+  borderRadius: '6px',
+  fontSize: '0.7rem',
+  fontWeight: '700',
+  zIndex: 1
+};
+
+const similarImageWrapper = {
+  height: '140px',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  marginBottom: '12px',
+  backgroundColor: '#f8fafc',
+  borderRadius: '12px'
+};
+
+const similarImage = {
+  maxWidth: '100%',
+  maxHeight: '120px',
+  objectFit: 'contain'
+};
+
+const similarContent = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '8px'
+};
+
+const similarItemName = {
+  fontSize: '0.85rem',
+  fontWeight: '600',
+  color: '#1e293b',
+  margin: 0,
+  lineHeight: '1.3',
+  display: '-webkit-box',
+  WebkitLineClamp: 2,
+  WebkitBoxOrient: 'vertical',
+  overflow: 'hidden'
+};
+
+const similarFooter = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center'
+};
+
+const similarPrice = {
+  fontSize: '0.95rem',
+  fontWeight: '800',
+  color: '#2563eb'
+};
+
+const similarSource = {
+  fontSize: '0.7rem',
+  color: '#64748b',
+  backgroundColor: '#f1f5f9',
+  padding: '2px 8px',
+  borderRadius: '4px',
+  fontWeight: '600'
+};
 
 export default ProductDetails;

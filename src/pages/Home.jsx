@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Loader2, Bookmark, ChevronRight } from 'lucide-react';
+import { Search, Loader2, Bookmark, ChevronRight, Sparkles } from 'lucide-react';
 import { db } from '../firebase';
 import { collection, addDoc, serverTimestamp, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
@@ -15,6 +15,8 @@ const Home = ({ user }) => {
   
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
   const [trendingItems, setTrendingItems] = useState([]);
+  const [recommendedItems, setRecommendedItems] = useState([]);
+  const [isRecommendationMode, setIsRecommendationMode] = useState(false);
 
   // State untuk Penapis (Filters)
   const [selectedRetailers, setSelectedRetailers] = useState(['Sports Direct', 'Al-Ikhsan', 'Original Classic']);
@@ -50,7 +52,7 @@ const Home = ({ user }) => {
   useEffect(() => {
     const fetchTrending = async () => {
       try {
-        const q = query(collection(db, "trending"), orderBy("createdAt", "desc"), limit(3));
+        const q = query(collection(db, "trending"), orderBy("createdAt", "desc"), limit(20));
         const querySnapshot = await getDocs(q);
         const items = [];
         querySnapshot.forEach((doc) => {
@@ -65,6 +67,111 @@ const Home = ({ user }) => {
     };
     fetchTrending();
   }, []);
+
+  // CONTENT-BASED RECOMMENDATION ENGINE
+  useEffect(() => {
+    if (!user || trendingItems.length === 0) {
+      setIsRecommendationMode(false);
+      return;
+    }
+
+    const buildRecommendations = async () => {
+      try {
+        // 1. Fetch user's watchlist to build preference profile
+        const watchlistQ = query(collection(db, "watchlist"), where("userId", "==", user.uid));
+        const watchlistSnap = await getDocs(watchlistQ);
+
+        if (watchlistSnap.empty) {
+          setIsRecommendationMode(false);
+          return;
+        }
+
+        // 2. Extract user preferences from watchlist
+        const brands = ['nike', 'adidas', 'asics', 'puma', 'under armour', 'skechers', 'new balance', 'reebok', 'fila', 'mizuno'];
+        const userBrands = new Map(); // brand -> count
+        const userCategories = new Map(); // category -> count
+        const userPrices = [];
+        const watchlistNames = new Set();
+
+        watchlistSnap.forEach(doc => {
+          const data = doc.data();
+          const nameLower = data.name?.toLowerCase() || '';
+          watchlistNames.add(nameLower);
+
+          // Extract brand
+          const foundBrand = brands.find(b => nameLower.includes(b));
+          if (foundBrand) {
+            userBrands.set(foundBrand, (userBrands.get(foundBrand) || 0) + 1);
+          }
+
+          // Extract category
+          const cat = determineCategory(data);
+          userCategories.set(cat, (userCategories.get(cat) || 0) + 1);
+
+          // Extract price
+          const price = parseFloat((data.price || '').toString().replace(/[^\d.]/g, ''));
+          if (!isNaN(price)) userPrices.push(price);
+        });
+
+        // Calculate price range (with 30% buffer)
+        const avgPrice = userPrices.length > 0 ? userPrices.reduce((a, b) => a + b, 0) / userPrices.length : 0;
+        const minPrice = avgPrice * 0.5;
+        const maxPrice = avgPrice * 1.8;
+
+        // 3. Score each trending product
+        const scored = trendingItems
+          .filter(item => {
+            // Exclude products already in watchlist
+            const itemNameLower = (item.name || '').toLowerCase();
+            return !watchlistNames.has(itemNameLower);
+          })
+          .map(item => {
+            let score = 0;
+            const reasons = [];
+            const itemNameLower = (item.name || '').toLowerCase();
+            const itemCat = determineCategory(item);
+
+            // Brand match (+3 points per match, weighted by user frequency)
+            const itemBrand = brands.find(b => itemNameLower.includes(b));
+            if (itemBrand && userBrands.has(itemBrand)) {
+              const weight = Math.min(userBrands.get(itemBrand), 3); // cap at 3
+              score += 3 * weight;
+              reasons.push(`You like ${itemBrand.charAt(0).toUpperCase() + itemBrand.slice(1)}`);
+            }
+
+            // Category match (+2 points)
+            if (userCategories.has(itemCat) && itemCat !== 'Others') {
+              score += 2 * Math.min(userCategories.get(itemCat), 2);
+              if (reasons.length === 0) reasons.push(`Based on your ${itemCat} interest`);
+            }
+
+            // Price range match (+1 point)
+            const itemPrice = parseFloat((item.price || '').toString().replace(/[^\d.]/g, ''));
+            if (!isNaN(itemPrice) && avgPrice > 0 && itemPrice >= minPrice && itemPrice <= maxPrice) {
+              score += 1;
+            }
+
+            return { ...item, score, reason: reasons[0] || 'Popular item' };
+          })
+          .filter(item => item.score > 0)
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 3);
+
+        if (scored.length >= 2) {
+          setRecommendedItems(scored);
+          setIsRecommendationMode(true);
+        } else {
+          setIsRecommendationMode(false);
+        }
+
+      } catch (error) {
+        console.error('Error building recommendations:', error);
+        setIsRecommendationMode(false);
+      }
+    };
+
+    buildRecommendations();
+  }, [user, trendingItems]);
 
   const handleSearch = async (e) => {
     e.preventDefault();
@@ -260,42 +367,62 @@ const Home = ({ user }) => {
         </form>
       </div>
 
-      {/* Figure 9: Trending Now Section */}
-      {!isLoading && results.length === 0 && !errorMsg && trendingItems.length > 0 && (
-        <div style={trendingSection}>
-          <div style={sectionHeader}>
-            <div>
-              <h2 style={sectionTitle}>Trending Now</h2>
-              <p style={sectionSubtitle}>Popular items being tracked by others.</p>
+      {/* RECOMMENDATION / TRENDING SECTION */}
+      {!isLoading && results.length === 0 && !errorMsg && (() => {
+        const displayItems = isRecommendationMode ? recommendedItems : trendingItems.slice(0, 3);
+        if (displayItems.length === 0) return null;
+
+        return (
+          <div style={trendingSection}>
+            <div style={sectionHeader}>
+              <div>
+                {isRecommendationMode ? (
+                  <>
+                    <h2 style={sectionTitle}>
+                      <Sparkles size={24} style={{ color: '#f59e0b', verticalAlign: 'middle', marginRight: '8px' }} />
+                      Recommended For You
+                    </h2>
+                    <p style={sectionSubtitle}>Based on your watchlist preferences.</p>
+                  </>
+                ) : (
+                  <>
+                    <h2 style={sectionTitle}>Trending Now</h2>
+                    <p style={sectionSubtitle}>Popular items being tracked by others.</p>
+                  </>
+                )}
+              </div>
             </div>
 
-          </div>
-
-          <div style={trendingGrid}>
-            {trendingItems.map((item, idx) => (
-              <div key={idx} style={trendingCard} className="hover-lift fade-in">
-                <div style={bestPriceTag}>Best: {formatPrice(item.price)}</div>
-                <div style={trendingImageWrapper}>
-                  <img src={item.image} alt={item.name} style={imageStyle} />
-                </div>
-                <div style={trendingContent}>
-                  <p style={categoryLabel}>{item.category}</p>
-                  <h3 style={productTitle}>{item.name}</h3>
-                  <div style={cardFooter}>
-                    <span style={pricesFound}>3 Prices Found</span>
-                    <button
-                      style={compareBtn}
-                      onClick={() => navigate(`/product-details?name=${encodeURIComponent(item.name)}&price=${encodeURIComponent(item.price)}&image=${encodeURIComponent(item.image)}&source=${encodeURIComponent(item.source)}&link=${encodeURIComponent(item.link)}`)}
-                    >
-                      Compare <ChevronRight size={16} />
-                    </button>
+            <div style={trendingGrid}>
+              {displayItems.map((item, idx) => (
+                <div key={idx} style={trendingCard} className="hover-lift fade-in">
+                  {isRecommendationMode && item.reason ? (
+                    <div style={reasonTag}>{item.reason}</div>
+                  ) : (
+                    <div style={bestPriceTag}>Best: {formatPrice(item.price)}</div>
+                  )}
+                  <div style={trendingImageWrapper}>
+                    <img src={item.image} alt={item.name} style={imageStyle} />
+                  </div>
+                  <div style={trendingContent}>
+                    <p style={categoryLabel}>{determineCategory(item)}</p>
+                    <h3 style={productTitle}>{item.name}</h3>
+                    <div style={cardFooter}>
+                      <span style={pricesFound}>{isRecommendationMode ? formatPrice(item.price) : '3 Prices Found'}</span>
+                      <button
+                        style={compareBtn}
+                        onClick={() => navigate(`/product-details?name=${encodeURIComponent(item.name)}&price=${encodeURIComponent(item.price)}&image=${encodeURIComponent(item.image)}&source=${encodeURIComponent(item.source)}&link=${encodeURIComponent(item.link)}`)}
+                      >
+                        Compare <ChevronRight size={16} />
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Paparan Mesej Ralat / Tiada Stok */}
       {errorMsg && (
@@ -737,6 +864,22 @@ const bestPriceTag = {
   fontSize: '0.75rem',
   fontWeight: '700',
   zIndex: 1
+};
+
+const reasonTag = {
+  position: 'absolute',
+  top: '20px',
+  right: '20px',
+  background: 'linear-gradient(135deg, #fef3c7, #fde68a)',
+  color: '#92400e',
+  padding: '4px 12px',
+  borderRadius: '6px',
+  fontSize: '0.75rem',
+  fontWeight: '700',
+  zIndex: 1,
+  display: 'flex',
+  alignItems: 'center',
+  gap: '4px'
 };
 
 const trendingImageWrapper = {
