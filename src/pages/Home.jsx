@@ -55,8 +55,14 @@ const Home = ({ user }) => {
         const q = query(collection(db, "trending"), orderBy("createdAt", "desc"), limit(20));
         const querySnapshot = await getDocs(q);
         const items = [];
+        const seenNames = new Set();
         querySnapshot.forEach((doc) => {
-          items.push({ id: doc.id, ...doc.data() });
+          const data = doc.data();
+          const nameLower = (data.name || '').toLowerCase();
+          if (!seenNames.has(nameLower)) {
+            seenNames.add(nameLower);
+            items.push({ id: doc.id, ...data });
+          }
         });
         if (items.length > 0) {
           setTrendingItems(items);
@@ -118,12 +124,17 @@ const Home = ({ user }) => {
         const minPrice = avgPrice * 0.5;
         const maxPrice = avgPrice * 1.8;
 
-        // 3. Score each trending product
+        // 3. Score each trending product (with deduplication)
+        const seenNames = new Set();
         const scored = trendingItems
           .filter(item => {
-            // Exclude products already in watchlist
             const itemNameLower = (item.name || '').toLowerCase();
-            return !watchlistNames.has(itemNameLower);
+            // Exclude products already in watchlist
+            if (watchlistNames.has(itemNameLower)) return false;
+            // Deduplicate: skip if already seen
+            if (seenNames.has(itemNameLower)) return false;
+            seenNames.add(itemNameLower);
+            return true;
           })
           .map(item => {
             let score = 0;

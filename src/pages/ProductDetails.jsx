@@ -103,12 +103,17 @@ const ProductDetails = ({ user }) => {
         const snap = await getDocs(q);
 
         const scored = [];
+        const seenNames = new Set(); // Deduplikasi: elak produk sama muncul berkali-kali
         snap.forEach(doc => {
           const data = doc.data();
           const itemName = (data.name || '').toLowerCase();
 
           // Skip if same product
           if (itemName === nameLower) return;
+
+          // Skip if already seen (deduplicate)
+          if (seenNames.has(itemName)) return;
+          seenNames.add(itemName);
 
           let score = 0;
           const reasons = [];
@@ -131,7 +136,7 @@ const ProductDetails = ({ user }) => {
           }
 
           // Price range match (within 50% of current price)
-          const itemPrice = parseFloat((data.price || '').toString().replace(/[^\\d.]/g, ''));
+          const itemPrice = parseFloat((data.price || '').toString().replace(/[^\d.]/g, ''));
           if (!isNaN(itemPrice) && !isNaN(currentPrice) && currentPrice > 0) {
             if (itemPrice >= currentPrice * 0.5 && itemPrice <= currentPrice * 1.5) {
               score += 1;
