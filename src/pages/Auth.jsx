@@ -138,6 +138,18 @@ const Auth = () => {
             </div>
           )}
 
+          {/* Syarat Kata Laluan Dinamik (Hanya untuk Register) */}
+          {!isLogin && (
+            <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '-5px', paddingLeft: '5px' }}>
+              <p style={{ margin: '0 0 3px 0', fontWeight: '600' }}>Password requirements:</p>
+              <ul style={{ margin: 0, paddingLeft: '15px', listStyleType: 'circle', lineHeight: '1.4' }}>
+                <li style={{ color: password.length >= 8 ? '#10b981' : '#64748b', transition: 'color 0.3s' }}>At least 8 characters</li>
+                <li style={{ color: /[A-Z]/.test(password) ? '#10b981' : '#64748b', transition: 'color 0.3s' }}>At least 1 uppercase letter</li>
+                <li style={{ color: /[0-9]/.test(password) ? '#10b981' : '#64748b', transition: 'color 0.3s' }}>At least 1 number</li>
+              </ul>
+            </div>
+          )}
+
           {/* Confirm Password (Hanya untuk Register) */}
           {!isLogin && (
             <div style={inputGroup}>
