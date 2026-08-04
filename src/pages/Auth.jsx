@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth } from '../firebase';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { LogIn, UserPlus, Mail, Lock } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore'; 
 import { db } from '../firebase'; // Pastikan db diimport
@@ -39,13 +39,16 @@ const Auth = () => {
         status: "Active"
       });
 
-      if (email === 'admin@sportprice.com' || email === 'ahmadammar0601@gmail.com') {
-        alert("Admin account created successfully!");
-        navigate('/admin');
-      } else {
-        alert("Account created successfully and saved to Database!");
-        navigate('/dashboard');
-      }
+      // 3. SELESAIKAN ISU AUTO-LOGIN
+      // Secara lalai, Firebase akan terus log masuk user selepas daftar.
+      // Kita sign-out mereka supaya mereka terpaksa login secara manual.
+      await signOut(auth);
+
+      alert("Account created successfully! Please log in to continue.");
+      
+      // Kosongkan password dan tukar form kepada mod Login
+      setPassword('');
+      setIsLogin(true);
     }
   } catch (err) {
     setError(err.message);
