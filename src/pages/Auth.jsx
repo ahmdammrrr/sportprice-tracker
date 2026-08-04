@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth } from '../firebase';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, sendEmailVerification } from 'firebase/auth';
 import { LogIn, UserPlus, Mail, Lock } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore'; 
 import { db } from '../firebase'; // Pastikan db diimport
@@ -11,7 +11,22 @@ const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
+
+  // Helper untuk Kekuatan Kata Laluan
+  const calculatePasswordStrength = (pass) => {
+    let score = 0;
+    if (pass.length > 5) score += 1;
+    if (pass.length > 7) score += 1;
+    if (/[A-Z]/.test(pass)) score += 1;
+    if (/[0-9]/.test(pass)) score += 1;
+    if (/[^A-Za-z0-9]/.test(pass)) score += 1;
+    return Math.min(score, 4);
+  };
+  const strengthScore = calculatePasswordStrength(password);
+  const strengthColors = ['#e2e8f0', '#ef4444', '#f59e0b', '#10b981', '#10b981']; // Gray, Red, Orange, Green, Green
+  const strengthLabels = ['', 'Weak', 'Fair', 'Good', 'Strong'];
 
   const handleSubmit = async (e) => {
   e.preventDefault();
@@ -19,7 +34,15 @@ const Auth = () => {
   
   try {
     if (isLogin) {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // Semak Email Verification (penting untuk keselamatan)
+      if (!user.emailVerified && email !== 'admin@sportprice.com' && email !== 'ahmadammar0601@gmail.com') {
+        await signOut(auth);
+        throw new Error("Please verify your email address before logging in. Check your inbox/spam folder.");
+      }
+
       if (email === 'admin@sportprice.com' || email === 'ahmadammar0601@gmail.com') {
         alert("Welcome back, Admin!");
         navigate('/admin');
@@ -28,9 +51,20 @@ const Auth = () => {
         navigate('/dashboard');
       }
     } else {
+      // Validasi UI Register
+      if (password !== confirmPassword) {
+        throw new Error("Passwords do not match!");
+      }
+      if (strengthScore < 3) {
+        throw new Error("Please choose a stronger password (min 8 chars, 1 uppercase, 1 number).");
+      }
+
       // 1. Cipta user di Authentication
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
+
+      // 2. HANTAR E-MEL PENGESAHAN
+      await sendEmailVerification(user);
 
       // 2. Simpan data user ke Firestore secara manual
       await setDoc(doc(db, "users", user.uid), {
@@ -39,15 +73,16 @@ const Auth = () => {
         status: "Active"
       });
 
-      // 3. SELESAIKAN ISU AUTO-LOGIN
+      // 4. SELESAIKAN ISU AUTO-LOGIN
       // Secara lalai, Firebase akan terus log masuk user selepas daftar.
-      // Kita sign-out mereka supaya mereka terpaksa login secara manual.
+      // Kita sign-out mereka supaya mereka terpaksa login secara manual selepas sahkan e-mel.
       await signOut(auth);
 
-      alert("Account created successfully! Please log in to continue.");
+      alert("Registration successful! A verification link has been sent to your email. Please verify your email before logging in.");
       
       // Kosongkan password dan tukar form kepada mod Login
       setPassword('');
+      setConfirmPassword('');
       setIsLogin(true);
     }
   } catch (err) {
@@ -88,6 +123,35 @@ const Auth = () => {
               required 
             />
           </div>
+
+          {/* Password Strength Meter (Hanya untuk Register) */}
+          {!isLogin && password.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginTop: '-5px' }}>
+              <div style={{ display: 'flex', gap: '5px', height: '4px' }}>
+                {[1, 2, 3, 4].map(level => (
+                  <div key={level} style={{ flex: 1, backgroundColor: strengthScore >= level ? strengthColors[strengthScore] : '#e2e8f0', borderRadius: '2px', transition: 'all 0.3s' }} />
+                ))}
+              </div>
+              <span style={{ fontSize: '0.7rem', color: strengthColors[strengthScore], textAlign: 'right', fontWeight: 'bold' }}>
+                {strengthLabels[strengthScore]}
+              </span>
+            </div>
+          )}
+
+          {/* Confirm Password (Hanya untuk Register) */}
+          {!isLogin && (
+            <div style={inputGroup}>
+              <Lock size={18} color="#666" />
+              <input 
+                type="password" 
+                placeholder="Confirm Password" 
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                style={inputStyle} 
+                required 
+              />
+            </div>
+          )}
 
           <button type="submit" style={{ ...buttonStyle, backgroundColor: isLogin ? '#2563eb' : '#10b981', transition: 'background-color 0.3s ease' }}>
             {isLogin ? <><LogIn size={18} /> Login</> : <><UserPlus size={18} /> Register</>}
