@@ -328,20 +328,32 @@ app.get('/check-sizes', async (req, res) => {
                 let availableSizes = [];
                 const htmlData = response.data;
 
-                // Kaedah 1: Ekstrak dari sizeVariants JSON tersembunyi di dalam <script>
-                const sizeRegex = /sizeVariants[\\]*":\s*\[(.*?)\]/g;
+                // Kaedah 1: Ekstrak dari sizeVariants JSON tersembunyi di dalam <script> (Next.js RSC format)
+                // Format dalam HTML: sizeVariants\\\":[{\\\"description\\\":\\\"S\\\",\\\"variantId\\\":\\\"...\\\"}]
+                const sizeRegex = /sizeVariants\\+":\s*\[([^\]]*)\]/g;
                 let sizeMatch;
                 while ((sizeMatch = sizeRegex.exec(htmlData)) !== null) {
                     try {
-                        // Bersihkan dan parse JSON
-                        const cleaned = '[' + sizeMatch[1].replace(/\\"/g, '"').replace(/\\\\/g, '\\') + ']';
+                        // Unescape: ganti \\\" dengan " untuk parse JSON
+                        const unescaped = sizeMatch[1]
+                            .replace(/\\\\"/g, '"')   // \\\" -> "
+                            .replace(/\\\\/g, '\\');  // \\\\ -> \
+                        const cleaned = '[' + unescaped + ']';
                         const variants = JSON.parse(cleaned);
                         variants.forEach(v => {
                             if (v.description && !availableSizes.includes(v.description)) {
                                 availableSizes.push(v.description);
                             }
                         });
-                    } catch (e) { /* Langkau jika JSON tidak sah */ }
+                    } catch (e) { 
+                        // Cuba kaedah mudah: extract description values terus dengan regex
+                        const descMatches = sizeMatch[1].matchAll(/description\\*":\s*\\*"([^"\\]+)\\*"/g);
+                        for (const dm of descMatches) {
+                            if (dm[1] && !availableSizes.includes(dm[1])) {
+                                availableSizes.push(dm[1]);
+                            }
+                        }
+                    }
                 }
 
                 // Kaedah 2 (Fallback): Cuba kaedah cheerio lama jika sizeVariants tiada
