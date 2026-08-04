@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Loader2, Bookmark, ChevronRight, Sparkles } from 'lucide-react';
+import { Search, Loader2, Eye, ChevronRight, Sparkles } from 'lucide-react';
 import { db } from '../firebase';
 import { collection, addDoc, serverTimestamp, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
@@ -548,7 +548,7 @@ const Home = ({ user }) => {
                         Buy
                       </a>
                       <button onClick={() => handleSaveWatchlist(item)} style={watchlistButton} title="Save to Watchlist">
-                        <Bookmark size={20} />
+                        <Eye size={20} />
                       </button>
                     </div>
                   </div>

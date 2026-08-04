@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, ExternalLink, Bell, TrendingDown, TrendingUp, Clock, Loader2, Bookmark, Sparkles } from 'lucide-react';
+import { ChevronLeft, ExternalLink, Bell, TrendingDown, TrendingUp, Clock, Loader2, Eye, Sparkles } from 'lucide-react';
 import { db } from '../firebase';
 import { collection, addDoc, serverTimestamp, query, where, getDocs, Timestamp, orderBy, limit } from 'firebase/firestore';
 import {
@@ -618,7 +618,7 @@ const ProductDetails = ({ user }) => {
               style={isSaved ? savedBtnStyle : watchlistBtnStyle}
               title={isSaved ? "Saved to Watchlist" : "Save to Watchlist"}
             >
-              <Bookmark size={24} fill={isSaved ? "#fff" : "none"} />
+              <Eye size={24} fill={isSaved ? "#fff" : "none"} />
             </button>
           </div>
           <h1 style={productTitle}>{productName}</h1>
