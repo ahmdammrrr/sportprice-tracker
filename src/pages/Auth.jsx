@@ -56,7 +56,7 @@ const Auth = () => {
 };
 
   return (
-    <div style={containerStyle}>
+    <div style={{ ...containerStyle, backgroundColor: isLogin ? '#f8fafc' : '#ecfdf5', transition: 'background-color 0.5s ease' }}>
       <div style={cardStyle}>
         <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>
           {isLogin ? 'Login to SportPrice' : 'Create a New Account'}
@@ -89,7 +89,7 @@ const Auth = () => {
             />
           </div>
 
-          <button type="submit" style={buttonStyle}>
+          <button type="submit" style={{ ...buttonStyle, backgroundColor: isLogin ? '#2563eb' : '#10b981', transition: 'background-color 0.3s ease' }}>
             {isLogin ? <><LogIn size={18} /> Login</> : <><UserPlus size={18} /> Register</>}
           </button>
         </form>
