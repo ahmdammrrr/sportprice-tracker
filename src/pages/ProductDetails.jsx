@@ -77,7 +77,7 @@ const ProductDetails = ({ user }) => {
 
   // CONTENT-BASED RECOMMENDATION: Fetch similar products from trending
   useEffect(() => {
-    if (!productName) return;
+    if (!productName || !user) return; // Jangan fetch jika tiada user
 
     const fetchSimilarProducts = async () => {
       try {
@@ -764,7 +764,7 @@ const ProductDetails = ({ user }) => {
       </div>
 
       {/* YOU MIGHT ALSO LIKE - Content-Based Recommendation */}
-      {similarProducts.length > 0 && (
+      {user && similarProducts.length > 0 && (
         <div style={similarSection}>
           <h2 style={similarTitle}>
             <Sparkles size={20} style={{ color: '#f59e0b', verticalAlign: 'middle', marginRight: '8px' }} />
