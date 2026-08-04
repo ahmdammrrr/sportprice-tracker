@@ -95,6 +95,41 @@ app.get('/', (req, res) => {
     res.send('🔥 Enjin Dynamic Multi-Source Scraper SportPrice Tracker sedia!');
 });
 
+// 1b. DEBUG ENDPOINT — Dump raw HTML untuk analisis struktur saiz
+app.get('/debug-html', async (req, res) => {
+    const { url } = req.query;
+    if (!url) return res.status(400).send('Sila berikan ?url=...');
+
+    try {
+        const response = await axios.get('http://api.scraperapi.com', {
+            params: { api_key: SCRAPER_API_KEY, url: url, country_code: 'my' },
+            timeout: 30000
+        });
+
+        const html = response.data;
+
+        // Extract bahagian yang relevan sahaja (cari sizeVariants, isAvailable, button size)
+        const lines = html.split('\n');
+        const relevantLines = lines.filter(line =>
+            line.includes('sizeVariant') ||
+            line.includes('isAvailable') ||
+            line.includes('swatch-button') ||
+            line.includes('"size"') ||
+            line.includes('variant-selector') ||
+            line.includes('"S"') || line.includes('"M"') || line.includes('"L"') || line.includes('"XL"')
+        );
+
+        res.setHeader('Content-Type', 'text/plain');
+        res.send(
+            `=== RELEVANT LINES (${relevantLines.length} found) ===\n\n` +
+            relevantLines.slice(0, 100).join('\n') +
+            `\n\n=== RAW HTML LENGTH: ${html.length} chars ===`
+        );
+    } catch (err) {
+        res.status(500).send('Error: ' + err.message);
+    }
+});
+
 // 2. Endpoint Dynamic Scrape
 app.get('/scrape', async (req, res) => {
     // Kita ambil URL dari query parameter browser
