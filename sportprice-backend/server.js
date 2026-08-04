@@ -318,6 +318,34 @@ app.get('/check-sizes', async (req, res) => {
                     });
                 }
 
+                // Kaedah 3 (Fallback Apparel): Cari butang saiz S/M/L/XL yang aktif
+                if (availableSizes.length === 0) {
+                    const $ = cheerio.load(htmlData);
+                    // Cari semua button yang mengandungi teks saiz apparel (S, M, L, XL, XXL, dll)
+                    $('button').each((i, el) => {
+                        const text = $(el).text().trim();
+                        const isDisabled = $(el).attr('disabled') || $(el).attr('aria-disabled') === 'true' || $(el).hasClass('disabled');
+                        const sizePattern = /^(XXS|XS|S|M|L|XL|XXL|2XL|3XL|4XL|\d+)$/i;
+                        if (sizePattern.test(text) && !isDisabled) {
+                            if (!availableSizes.includes(text.toUpperCase())) {
+                                availableSizes.push(text.toUpperCase());
+                            }
+                        }
+                    });
+                }
+
+                // Kaedah 4 (Fallback JSON lanjutan): Cari "isAvailable":true dalam JSON tersembunyi
+                if (availableSizes.length === 0) {
+                    const variantJsonRegex = /"size":\s*"([^"]+)"[^}]*"isAvailable":\s*true/gi;
+                    let match;
+                    while ((match = variantJsonRegex.exec(htmlData)) !== null) {
+                        const saiz = match[1].trim();
+                        if (saiz && !availableSizes.includes(saiz)) {
+                            availableSizes.push(saiz);
+                        }
+                    }
+                }
+
                 if (availableSizes.length > 0 || attempt === MAX_RETRIES) {
                     console.log(`✅ Sports Direct: Jumpa ${availableSizes.length} saiz.`);
                     return res.json({ status: 'Success', source: source, sizes: availableSizes });
