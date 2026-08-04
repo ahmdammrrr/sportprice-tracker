@@ -119,7 +119,7 @@ const PriceAlerts = ({ user }) => {
                   onClick={() => navigate(`/product-details?name=${encodeURIComponent(alert.productName)}&price=${encodeURIComponent(alert.currentPrice)}&image=${encodeURIComponent(alert.image)}&source=${encodeURIComponent(alert.source)}&link=${encodeURIComponent(alert.link)}`)} 
                   style={compareBtn}
                 >
-                  Compare Price
+                  Price Details
                 </button>
                 <button onClick={() => handleRemove(alert.id)} style={deleteBtn}>
                   <Trash2 size={18} />

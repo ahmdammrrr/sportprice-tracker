@@ -542,7 +542,7 @@ const Home = ({ user }) => {
                         onClick={() => navigate(`/product-details?name=${encodeURIComponent(item.name)}&price=${encodeURIComponent(item.price)}&image=${encodeURIComponent(item.image)}&source=${encodeURIComponent(item.source)}&link=${encodeURIComponent(item.link)}`)}
                         style={compareActionBtn}
                       >
-                        Compare Price
+                        Price Details
                       </button>
                       <a href={item.link} target="_blank" rel="noreferrer" style={buyButton}>
                         Buy

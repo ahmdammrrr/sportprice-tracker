@@ -95,7 +95,7 @@ const Watchlist = ({ user }) => {
                     onClick={() => navigate(`/product-details?name=${encodeURIComponent(item.name)}&price=${encodeURIComponent(item.price)}&image=${encodeURIComponent(item.image)}&source=${encodeURIComponent(item.source)}&link=${encodeURIComponent(item.link)}`)}
                     style={compareBtn}
                   >
-                    Compare Price <ArrowRight size={16} />
+                    Price Details <ArrowRight size={16} />
                   </button>
                   
                   <div style={bottomActions}>
