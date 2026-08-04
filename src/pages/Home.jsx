@@ -420,7 +420,12 @@ const Home = ({ user }) => {
                   </div>
                   <div style={trendingContent}>
                     <p style={categoryLabel}>{determineCategory(item)}</p>
-                    <h3 style={productTitle}>{item.name}</h3>
+                    <h3
+                      style={{ ...productTitle, cursor: 'pointer', transition: 'color 0.2s' }}
+                      onClick={() => navigate(`/product-details?name=${encodeURIComponent(item.name)}&price=${encodeURIComponent(item.price)}&image=${encodeURIComponent(item.image)}&source=${encodeURIComponent(item.source)}&link=${encodeURIComponent(item.link)}`)}
+                      onMouseEnter={e => { e.currentTarget.style.color = '#2563eb'; e.currentTarget.style.textDecoration = 'underline'; }}
+                      onMouseLeave={e => { e.currentTarget.style.color = ''; e.currentTarget.style.textDecoration = ''; }}
+                    >{item.name}</h3>
                     <div style={cardFooter}>
                       <span style={pricesFound}>{isRecommendationMode ? formatPrice(item.price) : '3 Prices Found'}</span>
                       <button
@@ -533,7 +538,13 @@ const Home = ({ user }) => {
                         </span>
                       )}
                     </div>
-                    <h3 style={productTitle} title={item.name}>{item.name}</h3>
+                    <h3
+                      style={{ ...productTitle, cursor: 'pointer', transition: 'color 0.2s' }}
+                      title={item.name}
+                      onClick={() => navigate(`/product-details?name=${encodeURIComponent(item.name)}&price=${encodeURIComponent(item.price)}&image=${encodeURIComponent(item.image)}&source=${encodeURIComponent(item.source)}&link=${encodeURIComponent(item.link)}`)}
+                      onMouseEnter={e => { e.currentTarget.style.color = '#2563eb'; e.currentTarget.style.textDecoration = 'underline'; }}
+                      onMouseLeave={e => { e.currentTarget.style.color = ''; e.currentTarget.style.textDecoration = ''; }}
+                    >{item.name}</h3>
                     <p style={priceStyle}>{formatPrice(item.price)}</p>
 
                     {/* Butang Tindakan */}
