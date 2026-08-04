@@ -311,16 +311,16 @@ app.get('/check-sizes', async (req, res) => {
     if (source === 'Sports Direct') {
         const MAX_RETRIES = 2;
         for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-            const dynamicTimeout = attempt === 1 ? 30000 : 60000;
+            const dynamicTimeout = attempt === 1 ? 45000 : 90000;
             try {
-                console.log(`\n[+] Semak Saiz Sports Direct (Tanpa Render, Cubaan ${attempt}/${MAX_RETRIES}): ${url}`);
+                console.log(`\n[+] Semak Saiz Sports Direct (Dengan Render, Cubaan ${attempt}/${MAX_RETRIES}): ${url}`);
                 
                 const response = await axios.get('http://api.scraperapi.com', {
                     params: {
                         api_key: SCRAPER_API_KEY,
                         url: url,
+                        render: 'true', // WAJIB: Saiz dimuat secara dinamik oleh JavaScript
                         country_code: 'my'
-                        // TIADA render: 'true' — jimat 9 kredit!
                     },
                     timeout: dynamicTimeout
                 });
