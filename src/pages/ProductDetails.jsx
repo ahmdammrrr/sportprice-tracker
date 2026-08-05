@@ -102,8 +102,10 @@ const ProductDetails = ({ user }) => {
         const q = query(collection(db, "trending"), orderBy("createdAt", "desc"), limit(30));
         const snap = await getDocs(q);
 
-        const scored = [];
-        const seenNames = new Set(); // Deduplikasi: elak produk sama muncul berkali-kali
+        const brandPool = [];
+        const categoryPool = [];
+        const uniqueNames = new Set(); 
+
         snap.forEach(doc => {
           const data = doc.data();
           const itemName = (data.name || '').toLowerCase();
@@ -111,18 +113,19 @@ const ProductDetails = ({ user }) => {
           // Skip if same product
           if (itemName === nameLower) return;
 
-          // Skip if already seen (deduplicate)
-          if (seenNames.has(itemName)) return;
-          seenNames.add(itemName);
+          // Skip if already evaluated
+          if (uniqueNames.has(itemName)) return;
+          uniqueNames.add(itemName);
 
           let score = 0;
-          const reasons = [];
+          let hasBrand = false;
+          let catReason = null;
 
           // Brand match
           const itemBrand = brands.find(b => itemName.includes(b));
           if (currentBrand && itemBrand === currentBrand) {
             score += 4;
-            reasons.push(`Same brand`);
+            hasBrand = true;
           }
 
           // Category match
@@ -132,7 +135,7 @@ const ProductDetails = ({ user }) => {
           }
           if (currentCategory !== 'Others' && itemCat === currentCategory) {
             score += 3;
-            if (reasons.length === 0) reasons.push(`Similar ${itemCat.toLowerCase()}`);
+            catReason = `Similar ${itemCat.toLowerCase()}`;
           }
 
           // Price range match (within 50% of current price)
@@ -144,13 +147,50 @@ const ProductDetails = ({ user }) => {
           }
 
           if (score > 0) {
-            scored.push({ ...data, score, reason: reasons[0] || 'Popular item' });
+            if (hasBrand) {
+                brandPool.push({ ...data, score, reason: 'Same brand' });
+            }
+            if (catReason) {
+                categoryPool.push({ ...data, score, reason: catReason });
+            }
           }
         });
 
-        // Sort by score and take top 4
-        scored.sort((a, b) => b.score - a.score);
-        setSimilarProducts(scored.slice(0, 4));
+        // Sort both pools by score
+        brandPool.sort((a, b) => b.score - a.score);
+        categoryPool.sort((a, b) => b.score - a.score);
+
+        const finalRecommendations = [];
+        const usedNames = new Set();
+
+        // Interleave picking logic
+        for (let i = 0; i < Math.max(brandPool.length, categoryPool.length) && finalRecommendations.length < 4; i++) {
+            // Try pick 1 from brandPool
+            while(brandPool.length > 0) {
+                 const item = brandPool.shift();
+                 const itemName = (item.name || '').toLowerCase();
+                 if (!usedNames.has(itemName)) {
+                     finalRecommendations.push(item);
+                     usedNames.add(itemName);
+                     break;
+                 }
+            }
+            
+            if (finalRecommendations.length >= 4) break;
+            
+            // Try pick 1 from categoryPool
+            while(categoryPool.length > 0) {
+                 const item = categoryPool.shift();
+                 const itemName = (item.name || '').toLowerCase();
+                 if (!usedNames.has(itemName)) {
+                     finalRecommendations.push(item);
+                     usedNames.add(itemName);
+                     break;
+                 }
+            }
+        }
+
+        setSimilarProducts(finalRecommendations);
 
       } catch (error) {
         console.error('Error fetching similar products:', error);
