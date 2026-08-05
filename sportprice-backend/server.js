@@ -977,22 +977,15 @@ app.post('/api/categorize-image', async (req, res) => {
     if (!imageUrl) return res.status(400).json({ error: 'Sila berikan URL gambar.' });
 
     try {
-        // Download image data
-        const imageResp = await axios.get(imageUrl, { responseType: 'arraybuffer' });
-        const imageBuffer = Buffer.from(imageResp.data);
-        const base64Image = imageBuffer.toString("base64");
-        const mimeType = imageResp.headers['content-type'] || 'image/jpeg';
-        
-        const prompt = `You are a sports product categorizer. Look at this image of a product named "${productName}". Classify it strictly into ONLY ONE of these three categories: 'Footwear', 'Apparel', or 'Accessories'. If it is a bag or backpack, it is Accessories. If it is a shoe or boot, it is Footwear. Respond with ONLY the exact category name (1 word).`;
+        // Groq has decommissioned their vision models. However, we can perfectly categorize sports 
+        // products using just the product name with a text-only LLM.
+        const prompt = `You are a sports product categorizer. Look at this product name: "${productName}". Classify it strictly into ONLY ONE of these three categories: 'Footwear', 'Apparel', or 'Accessories'. If it is a bag or backpack, it is Accessories. If it is a shoe or boot, it is Footwear. Respond with ONLY the exact category name (1 word) and nothing else.`;
         
         const groqResponse = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
-            model: "llama-3.2-11b-vision-preview",
+            model: "llama-3.3-70b-versatile",
             messages: [{
                 role: "user",
-                content: [
-                    { type: "text", text: prompt },
-                    { type: "image_url", image_url: { url: `data:${mimeType};base64,${base64Image}` } }
-                ]
+                content: prompt
             }],
             max_tokens: 15,
             temperature: 0.1
