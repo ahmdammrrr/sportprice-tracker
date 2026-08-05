@@ -319,7 +319,7 @@ const ProductDetails = ({ user }) => {
           const sizePromises = finalResults.map(async (item) => {
              if (item.link && item.source) {
                 try {
-                   const res = await fetch(`${API_URL}/check-sizes?url=${encodeURIComponent(item.link)}&source=${encodeURIComponent(item.source)}`);
+                   const res = await fetch(`${API_URL}/check-sizes?url=${encodeURIComponent(item.link)}&source=${encodeURIComponent(item.source)}&name=${encodeURIComponent(item.name || productName)}`);
                    const sizeData = await res.json();
                    return { source: item.source, sizes: sizeData.status === 'Success' ? sizeData.sizes : [] };
                 } catch(error) {

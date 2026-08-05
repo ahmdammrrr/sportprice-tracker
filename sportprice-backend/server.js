@@ -257,7 +257,7 @@ app.get('/scrape', async (req, res) => {
 
 // Endpoint Semak Saiz Secara Berasingan (Untuk ProductDetails sahaja)
 app.get('/check-sizes', async (req, res) => {
-    const { url, source } = req.query;
+    const { url, source, name } = req.query;
 
     if (!url || !source) {
         return res.status(400).json({ error: 'Sila berikan url dan source.' });
@@ -309,19 +309,30 @@ app.get('/check-sizes', async (req, res) => {
     // Data sizeVariants tertanam di dalam HTML sebagai JSON
     // =====================================================
     if (source === 'Sports Direct') {
+        // Tentukan jika produk ini kasut atau bukan
+        const catKeywords = /\b(shoe|shoes|boot|boots|sneaker|sneakers|cleat|cleats|sandal|slide|futsal|trainer|trainers)\b/i;
+        const isFootwear = (name && catKeywords.test(name)) || catKeywords.test(url);
+        const needsRender = !isFootwear; // Baju/seluar perlukan render, kasut tak perlu
+
         const MAX_RETRIES = 2;
         for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-            const dynamicTimeout = attempt === 1 ? 45000 : 90000;
+            const dynamicTimeout = attempt === 1 ? (needsRender ? 45000 : 30000) : (needsRender ? 90000 : 60000);
             try {
-                console.log(`\n[+] Semak Saiz Sports Direct (Dengan Render, Cubaan ${attempt}/${MAX_RETRIES}): ${url}`);
+                const renderText = needsRender ? "Dengan Render" : "Tanpa Render";
+                console.log(`\n[+] Semak Saiz Sports Direct (${renderText}, Cubaan ${attempt}/${MAX_RETRIES}): ${url}`);
                 
+                const apiParams = {
+                    api_key: SCRAPER_API_KEY,
+                    url: url,
+                    country_code: 'my'
+                };
+                
+                if (needsRender) {
+                    apiParams.render = 'true'; // WAJIB: Saiz apparel dimuat secara dinamik oleh JavaScript
+                }
+
                 const response = await axios.get('http://api.scraperapi.com', {
-                    params: {
-                        api_key: SCRAPER_API_KEY,
-                        url: url,
-                        render: 'true', // WAJIB: Saiz dimuat secara dinamik oleh JavaScript
-                        country_code: 'my'
-                    },
+                    params: apiParams,
                     timeout: dynamicTimeout
                 });
 
