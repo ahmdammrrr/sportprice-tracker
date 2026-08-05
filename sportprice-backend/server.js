@@ -986,7 +986,7 @@ app.post('/api/categorize-image', async (req, res) => {
         const prompt = `You are a sports product categorizer. Look at this image of a product named "${productName}". Classify it strictly into ONLY ONE of these three categories: 'Footwear', 'Apparel', or 'Accessories'. If it is a bag or backpack, it is Accessories. If it is a shoe or boot, it is Footwear. Respond with ONLY the exact category name (1 word).`;
         
         const groqResponse = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
-            model: "meta-llama/llama-4-scout-17b-16e-instruct",
+            model: "llama-3.2-11b-vision-preview",
             messages: [{
                 role: "user",
                 content: [
