@@ -998,7 +998,7 @@ app.post('/api/categorize-image', async (req, res) => {
         
         const responseText = groqResponse.data.choices[0].message.content.trim();
         
-        let category = 'Others';
+        let category = 'Accessories'; // Fallback to Accessories instead of Others
         if (responseText.includes('Footwear')) category = 'Footwear';
         else if (responseText.includes('Apparel')) category = 'Apparel';
         else if (responseText.includes('Accessories')) category = 'Accessories';

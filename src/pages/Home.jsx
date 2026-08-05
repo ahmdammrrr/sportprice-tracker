@@ -20,7 +20,7 @@ const Home = ({ user }) => {
 
   // State untuk Penapis (Filters)
   const [selectedRetailers, setSelectedRetailers] = useState(['Sports Direct', 'Al-Ikhsan', 'Original Classic']);
-  const [selectedCategories, setSelectedCategories] = useState(['Footwear', 'Apparel', 'Accessories', 'Others']);
+  const [selectedCategories, setSelectedCategories] = useState(['Footwear', 'Apparel', 'Accessories']);
   const [sortBy, setSortBy] = useState('lowest');
 
   // State untuk Pagination
@@ -474,7 +474,7 @@ const Home = ({ user }) => {
 
             <h3 style={filterTitle}>Categories</h3>
             <div style={filterGroup}>
-              {['Footwear', 'Apparel', 'Accessories', 'Others'].map(cat => (
+              {['Footwear', 'Apparel', 'Accessories'].map(cat => (
                 <label key={cat} style={checkboxLabel} onClick={() => toggleCategory(cat)}>
                   <input type="checkbox" checked={selectedCategories.includes(cat)} readOnly style={{ cursor: 'pointer' }} /> {cat}
                 </label>
