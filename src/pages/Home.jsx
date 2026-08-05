@@ -40,11 +40,7 @@ const Home = ({ user }) => {
     // 3. Semak Footwear (Selepas pasti ia bukan bag/aksesori)
     if (/\b(shoe|shoes|boot|boots|sneaker|sneakers|cleat|cleats|sandal|sandals|slide|slides|futsal)\b/.test(n)) return 'Footwear';
 
-    // 4. Penyelamat (Fallback): Baca dari URL pautan (link) jika nama tak jelas
-    if (/\b(footwear|shoes|sneakers)\b/.test(l)) return 'Footwear';
-    if (/\b(clothing|apparel|wear)\b/.test(l)) return 'Apparel';
-    if (/\b(accessories|equipment)\b/.test(l)) return 'Accessories';
-
+    // Jika nama tak jelas, kembalikan 'Others' supaya AI Vision/Text ambil alih tugas ini
     return 'Others';
   };
 

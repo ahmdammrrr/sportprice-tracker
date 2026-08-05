@@ -978,8 +978,8 @@ app.post('/api/categorize-image', async (req, res) => {
 
     try {
         // Groq has decommissioned their vision models. However, we can perfectly categorize sports 
-        // products using just the product name with a text-only LLM.
-        const prompt = `You are a sports product categorizer. Look at this product name: "${productName}". Classify it strictly into ONLY ONE of these three categories: 'Footwear', 'Apparel', or 'Accessories'. If it is a bag or backpack, it is Accessories. If it is a shoe or boot, it is Footwear. Respond with ONLY the exact category name (1 word) and nothing else.`;
+        // products using just the product name and image URL text with a text-only LLM.
+        const prompt = `You are a sports product categorizer. Look at this product name: "${productName}". Also, here is the image URL which might contain clues in its path: "${imageUrl}". Classify it strictly into ONLY ONE of these three categories: 'Footwear', 'Apparel', or 'Accessories'. If it is a bag or backpack, it is Accessories. If it is a shoe or boot, it is Footwear. Respond with ONLY the exact category name (1 word) and nothing else.`;
         
         const groqResponse = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
             model: "llama-3.3-70b-versatile",
