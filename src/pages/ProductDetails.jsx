@@ -303,10 +303,32 @@ const ProductDetails = ({ user }) => {
             }
 
             // ==========================================
+            // SEMAKAN UMUR & JANTINA (Kids/Junior vs Dewasa, Men vs Women)
+            // ==========================================
+            const origName = productName.toLowerCase();
+            const isKidsOrig = /\b(kid'?s?|junior|boy'?s?|girl'?s?|youth|toddler|infant|children'?s?)\b/.test(origName);
+            const isWomensOrig = /\b(women'?s?|lady|ladies)\b/.test(origName);
+            const isMensOrig = /\b(men'?s?)\b/.test(origName);
+            
+            const isKidsItem = /\b(kid'?s?|junior|boy'?s?|girl'?s?|youth|toddler|infant|children'?s?)\b/.test(itemName);
+            const isWomensItem = /\b(women'?s?|lady|ladies)\b/.test(itemName);
+            const isMensItem = /\b(men'?s?)\b/.test(itemName);
+
+            // Peraturan Umur: Budak tak boleh campur Dewasa
+            if (isKidsOrig && !isKidsItem) return false;
+            if (!isKidsOrig && isKidsItem) return false;
+
+            // Peraturan Jantina: Perempuan tak boleh campur Lelaki
+            if (isWomensOrig && (isMensItem && !isWomensItem)) return false; 
+            if (isMensOrig && isWomensItem) return false;
+            
+            // Jika asal tidak menyebut jantina (dianggap Men/Unisex), tolak jika item sebut Women
+            if (!isWomensOrig && !isMensOrig && isWomensItem) return false;
+
+            // ==========================================
             // SEMAKAN SUB-JENIS BEG & AKSESORI
             // (Mengelakkan beg sandang dipadankan dengan beg jerut walaupun model sama cth: "Heritage")
             // ==========================================
-            const origName = productName.toLowerCase();
             const isDrawstringOrig = /\b(drawstring|gymsack|gym\s*sack|shoe\s*bag)\b/.test(origName);
             const isWaistOrig = /\b(waist|waistpack|hip|fanny|crossbody|sling|pouch)\b/.test(origName);
             const isDuffelOrig = /\b(duffel|duffle|holdall|grip\s*bag)\b/.test(origName);
