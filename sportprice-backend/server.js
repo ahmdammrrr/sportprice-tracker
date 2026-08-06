@@ -401,7 +401,8 @@ app.get('/check-sizes', async (req, res) => {
                     api_key: SCRAPER_API_KEY,
                     url: url,
                     render: 'true',
-                    country_code: 'my'
+                    country_code: 'my',
+                    wait: '2000'
                 },
                 timeout: dynamicTimeout
             });
