@@ -319,7 +319,8 @@ app.get('/check-sizes', async (req, res) => {
                     api_key: SCRAPER_API_KEY,
                     url: url,
                     country_code: 'my',
-                    render: 'true' // WAJIB: Semua saiz (kasut & baju) kini dimuat secara dinamik oleh JavaScript
+                    render: 'true', // WAJIB: Semua saiz (kasut & baju) kini dimuat secara dinamik oleh JavaScript
+                    wait: '5000'    // WAJIB: Tunggu 5 saat selepas loading supaya butang saiz sempat di-render
                 };
 
                 const response = await axios.get('http://api.scraperapi.com', {
@@ -329,45 +330,15 @@ app.get('/check-sizes', async (req, res) => {
 
                 let availableSizes = [];
                 const htmlData = response.data;
+                const $ = cheerio.load(htmlData);
 
-                // Kaedah 1: Ekstrak dari sizeVariants JSON tersembunyi di dalam <script> (Next.js RSC format)
-                // Format dalam HTML: sizeVariants\\\":[{\\\"description\\\":\\\"S\\\",\\\"variantId\\\":\\\"...\\\"}]
-                const sizeRegex = /sizeVariants\\+":\s*\[([^\]]*)\]/g;
-                let sizeMatch;
-                while ((sizeMatch = sizeRegex.exec(htmlData)) !== null) {
-                    try {
-                        // Unescape: ganti \\\" dengan " untuk parse JSON
-                        const unescaped = sizeMatch[1]
-                            .replace(/\\\\"/g, '"')   // \\\" -> "
-                            .replace(/\\\\/g, '\\');  // \\\\ -> \
-                        const cleaned = '[' + unescaped + ']';
-                        const variants = JSON.parse(cleaned);
-                        variants.forEach(v => {
-                            if (v.description && !availableSizes.includes(v.description)) {
-                                availableSizes.push(v.description);
-                            }
-                        });
-                    } catch (e) { 
-                        // Cuba kaedah mudah: extract description values terus dengan regex
-                        const descMatches = sizeMatch[1].matchAll(/description\\*":\s*\\*"([^"\\]+)\\*"/g);
-                        for (const dm of descMatches) {
-                            if (dm[1] && !availableSizes.includes(dm[1])) {
-                                availableSizes.push(dm[1]);
-                            }
-                        }
-                    }
-                }
+                // Kaedah Utama: Cari butang saiz yang aktif (Tidak disabled)
+                $('div[data-testid="variant-selector-items"] button[data-testid="swatch-button-enabled"]').each((i, el) => {
+                    let saiz = $(el).attr('value') || $(el).text().trim();
+                    if (saiz) availableSizes.push(saiz);
+                });
 
-                // Kaedah 2 (Fallback): Cuba kaedah cheerio lama jika sizeVariants tiada
-                if (availableSizes.length === 0) {
-                    const $ = cheerio.load(htmlData);
-                    $('div[data-testid="variant-selector-items"] button[data-testid="swatch-button-enabled"]').each((i, el) => {
-                        let saiz = $(el).attr('value');
-                        if (saiz) availableSizes.push(saiz);
-                    });
-                }
-
-                // Kaedah 3 (Fallback Apparel): Cari butang saiz S/M/L/XL yang aktif
+                // Kaedah Fallback (Apparel/Kasut lama): Cari butang saiz S/M/L/XL yang aktif jika Kaedah Utama gagal
                 if (availableSizes.length === 0) {
                     const $ = cheerio.load(htmlData);
                     // Cari semua button yang mengandungi teks saiz apparel (S, M, L, XL, XXL, dll)
