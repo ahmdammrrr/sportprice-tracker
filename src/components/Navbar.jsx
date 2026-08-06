@@ -47,7 +47,9 @@ const Navbar = ({ user }) => { // Terima 'user' sebagai props
         {/* Jika user ada, tunjuk butang Logout. Jika takda, tunjuk ikon Login */}
         {user ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-            <span style={{ fontSize: '0.9rem', color: '#2563eb', fontWeight: '600' }}>{user.displayName || user.email}</span>
+            <Link to="/dashboard" style={{ fontSize: '0.9rem', color: '#2563eb', fontWeight: '600', textDecoration: 'none' }} className="hover-lift">
+              {user.displayName || user.email}
+            </Link>
             <LogOut size={22} onClick={handleLogout} style={{ cursor: 'pointer', color: '#ef4444' }} className="hover-lift" />
           </div>
         ) : (
