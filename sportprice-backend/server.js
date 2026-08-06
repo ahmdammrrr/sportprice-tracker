@@ -320,7 +320,7 @@ app.get('/check-sizes', async (req, res) => {
                     url: url,
                     country_code: 'my',
                     render: 'true', // WAJIB: Semua saiz (kasut & baju) kini dimuat secara dinamik oleh JavaScript
-                    wait: '5000'    // WAJIB: Tunggu 5 saat selepas loading supaya butang saiz sempat di-render
+                    wait: '2000'    // Kurangkan ke 2 saat untuk elak Vercel 10s timeout
                 };
 
                 const response = await axios.get('http://api.scraperapi.com', {
